@@ -12,11 +12,25 @@ jQuery(document).ready(function ($) {
 	// Get the default payment plan
 	const default_plan = payment_plans.plans.find( plan => plan.default === "yes" && plan.id !== payment_plans.parent_level );
 
-	// Append the payment plans to the DOM
-	payment_plans.plans.forEach( element => {
-		$( "#pmpropp_payment_plans" ).append( element.html );
-	});
-
+	// Render as select or radio based on setting
+	if ( payment_plans.render_as_select == 1 ) {
+		// Create select element
+		const selectHtml = '<select name="pmpropp_chosen_plan" id="pmpropp_select" class="' + 
+			$('#pmpropp_payment_plans').attr('class').replace('pmpro_form_field-radio-items', 'pmpro_form_input pmpro_form_input-select') + '">';
+		$('#pmpropp_payment_plans').html(selectHtml);
+		
+		// Append options
+		payment_plans.plans.forEach( element => {
+			$( "#pmpropp_select" ).append( element.option_html );
+		});
+		
+		$('#pmpropp_select').append('</select>');
+	} else {
+		// Append radio buttons as normal
+		payment_plans.plans.forEach( element => {
+			$( "#pmpropp_payment_plans" ).append( element.html );
+		});
+	}
 
 	// If there is a payment plan in the URL, select it and ignore the default
 	if ( payment_plan_query) {
@@ -37,6 +51,12 @@ jQuery(document).ready(function ($) {
 			appendPlanAndPriceByPlanId( chosen_plan );
 		}
 	}
+
+	// Event handlers for both select and radio
+	$( document ).on( "change", "#pmpropp_select", function() {
+		const planId = $(this).val();
+		appendPlanAndPriceByPlanId( planId );
+	});
 
 	$( ".pmpropp_chosen_plan" ).on( "click", function( ) {
 		const planId = $(this).val();
@@ -83,7 +103,12 @@ const appendPlanAndPrice = ( plan ) => {
 		return;
 	}
 	//id="pmpropp_chosen_plan_choice_L-2-P-0"
-	jQuery( '#pmpropp_chosen_plan_choice_' + plan.id ).prop( 'checked', true );
+	// Handle both select and radio selection
+	if ( payment_plans.render_as_select == 1 ) {
+		jQuery( '#pmpropp_select' ).val( plan.id );
+	} else {
+		jQuery( '#pmpropp_chosen_plan_choice_' + plan.id ).prop( 'checked', true );
+	}
 
 	const data = {
 		action: 'pmpropp_request_price_change',

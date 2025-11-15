@@ -109,6 +109,7 @@ function pmpropp_load_frontend_scripts() {
 					'plans'        => pmpropp_return_payment_plans( $level_id ),
 					'ajaxurl'      => admin_url( 'admin-ajax.php' ),
 					'parent_level' => $level_id,
+					'render_as_select' => get_pmpro_membership_level_meta( $level_id, 'pmpropp_render_as_select', true ),
 				)
 			);
 
@@ -157,6 +158,27 @@ function pmpropp_membership_level_after_other_settings() {
 add_action( 'pmpro_membership_level_after_trial_settings', 'pmpropp_membership_level_after_other_settings', 1 );
 
 /**
+ * Add payment plan render option to Other Settings.
+ *
+ * @since 0.5
+ */
+function pmpropp_membership_level_after_other_settings_render() {
+	if( $_REQUEST['edit'] !== "-1" ) {
+		?>
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th scope="row" valign="top"><label><?php esc_html_e( 'Payment Plan Display', 'pmpro-payment-plans' ); ?></label></th>
+					<td><input id="pmpropp_render_as_select" name="pmpropp_render_as_select" type="checkbox" value="1" <?php checked( get_pmpro_membership_level_meta( intval( $_REQUEST['edit'] ), 'pmpropp_render_as_select', true ), 1 ); ?> /> <label for="pmpropp_render_as_select"><?php esc_html_e( 'Output payment plans as select dropdown instead of radio buttons.', 'pmpro-payment-plans' ); ?></label></td>
+				</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+}
+add_action( 'pmpro_membership_level_after_other_settings', 'pmpropp_membership_level_after_other_settings_render' );
+
+/**
  * Save the payment plan settings when the level is saved.
  *
  * @since 0.1
@@ -165,11 +187,11 @@ function pmpropp_membership_level_save( $level_id ) {
 
 	$payment_plans = pmpropp_pair_plan_fields( $_REQUEST );
 
-	if ( empty( $payment_plans ) ) {
-		return;
+	if ( ! empty( $payment_plans ) ) {
+		update_pmpro_membership_level_meta( $level_id, 'payment_plan', $payment_plans );
 	}
 
-	update_pmpro_membership_level_meta( $level_id, 'payment_plan', $payment_plans );
+	update_pmpro_membership_level_meta( $level_id, 'pmpropp_render_as_select', ! empty( $_REQUEST['pmpropp_render_as_select'] ) ? 1 : 0 );
 }
 add_action( 'pmpro_save_membership_level', 'pmpropp_membership_level_save' );
 
@@ -352,6 +374,14 @@ function pmpropp_return_payment_plans( $level_id, $is_admin = false ) {
 				esc_attr( pmpro_get_element_class( 'pmpropp_chosen_plan pmpro_form_input pmpro_form_input-radio', 'pmpropp_chosen_plan_choice_-' . $plan->id ) ),
 				esc_attr( pmpro_get_element_class( 'pmpro_form_field pmpro_form_field-radio-item' ) ),
 				esc_attr( pmpro_get_element_class( 'pmpro_form_label pmpro_form_label-inline pmpro_clickable', 'pmpropp_chosen_plan_label_-' . $plan->id ) )
+			);
+
+			// Store option HTML for select rendering
+			$plan->option_html = sprintf(
+				'<option value="%1$s" %2$s>%3$s</option>',
+				esc_attr( $plan->id ),
+				selected( 'yes', $plan->default, false ),
+				$plan_name
 			);
 
 			/**
